@@ -13,15 +13,23 @@ WiFi.forceSleepBegin();
 delay(1); // Krátká pauza pro uložení stavu
   pinMode(TX_PIN, OUTPUT);
   digitalWrite(TX_PIN, LOW);   // Výchozí stav linky
+  pinMode(RX_PIN, INPUT);
   Serial.begin(9600);
 }
 
 // sender - Printer
 void loop() {
-  
+  Serial.println("Sending ... ");
   sendManchesterByte("Pokud chcete muzete ale nemusite zkouset porad dokola posilani dat! Coz je dobra zprava. Moc dobra.");
   delay(100);                   // Pauza mezi odesláním jednotlivých zpráv
+  sendManchesterByte("Pokud chcete muzete ale nemusite zkouset porad dokola posilani dat! Coz je dobra zprava. Moc dobra.");
+  delay(100);                   // Pauza mezi odesláním jednotlivých zpráv
+  sendManchesterByte("Pokud chcete muzete ale nemusite zkouset porad dokola posilani dat! Coz je dobra zprava. Moc dobra.");
+  delay(100);                   // Pauza mezi odesláním jednotlivých zpráv
+  Serial.println("Receiving ... ");
   String receivedData = receiveManchesterByte();
+  Serial.println("Received : ");
+  Serial.println(receivedData);
   if (receivedData != "") {    
     String validated = validateCRC16(receivedData);
     if (validated != "") {
@@ -161,6 +169,31 @@ String appendCRC16(const String& input) {
     return output;
 }
 
+String validateCRC16(const String& input) {
+    // Extrahujeme CRC16 z posledních 4 znaků (2 bajty) řetězce
+    int length = input.length();
+    if (length < 4) {
+        return "";  // Pokud je řetězec příliš krátký na CRC, vrátíme prázdný řetězec
+    }
+
+    // Poslední 4 znaky (2 bajty) budou CRC16
+    String crcHex = input.substring(length - 4);
+    uint16_t expectedCRC = strtol(crcHex.c_str(), NULL, 16);  // Převede hex na číslo
+
+    // Získáme původní text (bez CRC)
+    String originalText = input.substring(0, length - 4);
+
+    // Vypočítáme CRC16 pro původní text
+    uint16_t calculatedCRC = calculateCRC16(reinterpret_cast<const uint8_t*>(originalText.c_str()), originalText.length());
+
+    // Pokud CRC odpovídá, vrátíme původní text bez CRC
+    if (calculatedCRC == expectedCRC) {
+        return originalText;
+    } else {
+        return "";  // Pokud CRC neodpovídá, vrátíme prázdný řetězec
+    }
+}
+
 void preciseDigitalWrite(uint8_t pin, bool state, uint32_t durationUs) {
     // Převod na cykly procesoru (80 MHz = 12.5 ns na cyklus)
     uint32_t startCycles = ESP.getCycleCount();
@@ -192,4 +225,8 @@ bool preciseDigitalRead(uint8_t pin, uint32_t durationUs) {
 
     // Vrátí počáteční stav pinu
     return initialState;
+}
+
+void onSuccessfull(const String& data) {
+  Serial.println("Successfull!");
 }

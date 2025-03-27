@@ -11,12 +11,15 @@ void setup() {
   WiFi.mode(WIFI_OFF);
 WiFi.forceSleepBegin();
 delay(1); // Krátká pauza pro uložení stavu
+  pinMode(TX_PIN, OUTPUT);
+  digitalWrite(TX_PIN, LOW);   // Výchozí stav linky
   pinMode(RX_PIN, INPUT);
   Serial.begin(9600);
 }
 
 // receiver - ESP8266
 void loop() {
+  Serial.println("Receiving ... ");
   String receivedData = receiveManchesterByte();
   if (receivedData != "") {    
     String validated = validateCRC16(receivedData);
@@ -171,6 +174,17 @@ uint16_t calculateCRC16(const uint8_t *data, size_t length) {
     
     return crc;  // Vrátí CRC-16
 }
+
+String appendCRC16(const String& input) {
+    // Vypočítání CRC16
+    uint16_t crc = calculateCRC16(reinterpret_cast<const uint8_t*>(input.c_str()), input.length());
+
+    // Přidání CRC16 (v hexadecimálním formátu) k původnímu řetězci
+    String output = input + String(crc, HEX);  // Přidání CRC jako hex řetězce
+
+    return output;
+}
+
 bool preciseDigitalRead(uint8_t pin, uint32_t durationUs) {
     // Převod na cykly procesoru (80 MHz = 12.5 ns na cyklus)
     uint32_t startCycles = ESP.getCycleCount();
@@ -205,6 +219,5 @@ void preciseDigitalWrite(uint8_t pin, bool state, uint32_t durationUs) {
 }
 
 void onSuccessfull(const String& data) {
-  
-}
+  Serial.println("Successfull!");
 }
